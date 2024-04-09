@@ -5,6 +5,8 @@ namespace OpenTabletDriver.Plugin.Tablet
 {
     public struct TiltTabletReport : ITabletReport, ITiltReport
     {
+        private const uint MaxPressure = 8191;
+
         public TiltTabletReport(byte[] report)
         {
             Raw = report;
@@ -19,7 +21,8 @@ namespace OpenTabletDriver.Plugin.Tablet
                 X = (sbyte)report[10],
                 Y = (sbyte)report[11]
             };
-            Pressure = Unsafe.ReadUnaligned<ushort>(ref report[6]);
+
+            Pressure = MaxPressure - Unsafe.ReadUnaligned<ushort>(ref report[6]);
 
             var penByte = report[1];
             PenButtons = new bool[]
@@ -32,7 +35,22 @@ namespace OpenTabletDriver.Plugin.Tablet
         public byte[] Raw { set; get; }
         public Vector2 Position { set; get; }
         public Vector2 Tilt { set; get; }
-        public uint Pressure { set; get; }
+
+        private uint _pressure;
+        public uint Pressure
+        {
+            set
+            {
+                // Ensure pressure is within range [0, MaxPressure]
+                _pressure = (value > MaxPressure) ? MaxPressure : value;
+            }
+            get
+            {
+                return _pressure;
+            }
+        }
+
         public bool[] PenButtons { set; get; }
     }
 }
+
